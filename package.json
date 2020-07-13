@@ -1,0 +1,15 @@
+{
+  "name": "flash-cards-bot",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "MIT",
+  "dependencies": {
+    "env-cmd": "8.0.2",
+    "express": "^4.17.1",
+    "fs": "^0.0.1-security",
+    "node-telegram-bot-api": "^0.50.0"
+  },
+  "scripts": {
+    "dev": "env-cmd ./.env node src/server.js"
+  }
+}
