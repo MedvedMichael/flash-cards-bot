@@ -15,11 +15,12 @@ const insertCards = (username, text) => {
                 const collections = JSON.parse(data.toString())
                 const index = collections.findIndex((collection => collection.username === username))
                 let currentCollection = index === -1 ? null : collections.splice(index, 1)[0]
-                text.split('\n').map((line) => {
+                let counter = 0
+                text.split('\n').forEach(line => {
                     const parts = line.split(' - ')
                     if (parts.length !== 2)
                         return
-
+                    counter++;
                     if (currentCollection) {
                         const struggledIndex = currentCollection.cards.struggled.findIndex(item => item.word === parts[0])
                         const knowItIndex = currentCollection.cards.knowIt.findIndex(item => item.word === parts[0])
@@ -49,8 +50,9 @@ const insertCards = (username, text) => {
                         // userCards.push(currentCollection)
                     }
                 })
-                collections.push(currentCollection)
-                fs.writeFile(path, JSON.stringify(collections), () => resolve())
+                if(currentCollection)
+                    collections.push(currentCollection)
+                fs.writeFile(path, JSON.stringify(collections), () => resolve(counter))
 
             }
             catch (error) {

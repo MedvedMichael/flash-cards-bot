@@ -1,5 +1,6 @@
 const TelegramBot = require('node-telegram-bot-api')
 const { insertCards, getCollectionOfCards, saveData, deleteCollection } = require('./flash-card-menu')
+const e = require('express')
 const bot = new TelegramBot(process.env.BOT_TOKEN, { polling: true })
 const states = []
 const menuButtons = {
@@ -25,6 +26,8 @@ bot.on('message', msg => {
     triggerMenu(msg)
 })
 
+const sendDefaultMessage = async (chatId) => await bot.sendMessage(chatId, 'Choose what to do😊', menuButtons)
+
 function shuffle(array) {
     array.sort(() => Math.random() - 0.5);
     return array
@@ -41,38 +44,71 @@ const triggerMenu = async msg => {
         state = { username }
         switch (text) {
             case 'Insert cards✅':
-                await bot.sendMessage(msg.chat.id, 'Input all necessary cards like "word - definition"')
-                state.currentContext = 'inserting'
-                return states.push(state)
+                try {
+                    await bot.sendMessage(msg.chat.id, 'Input all necessary cards like "word - definition"',{
+                        'reply_markup':{
+                            remove_keyboard: true
+                        }
+                    })
+                    state.currentContext = 'inserting'
+                    return states.push(state)
+                }
+                catch (error) {
+                    console.log(error)
+                    return await sendDefaultMessage(chatId)
+                }
 
             case 'Start learning😉':
-                await bot.sendMessage(chatId, "Okay, now you will see some words, write their definitions if you know, then check if you know the word correctly. If you don't know the word, push the 'Don't know' button, else push 'Know it' button")
-                state.currentContext = 'learning'
-                const collection = await getCollectionOfCards(username)
-                state.collection = collection
-                if (!collection) {
-                    await bot.sendMessage(chatId, `You have no words yet, try 'Insert cards✅' button first`)
-                    return await bot.sendMessage(chatId, 'Choose what to do😊', menuButtons)
+                try {
+                    await bot.sendMessage(chatId, "Okay, now you will see some words, write their definitions if you know, then check if you know the word correctly. If you don't know the word, push the 'Don't know' button, else push 'Know it' button")
+                    state.currentContext = 'learning'
+                    const collection = await getCollectionOfCards(username)
+                    state.collection = collection
+                    if (!collection) {
+                        await bot.sendMessage(chatId, `You have no words yet, try 'Insert cards✅' button first`)
+                        return await sendDefaultMessage(chatId)
+                    }
+                    state.generatedArray = [...shuffle([...collection.cards.struggled]), ...shuffle([...collection.cards.knowIt])]
+                    states.push(state)
+                    return triggerMenu(msg);
                 }
-                state.generatedArray = [...shuffle([...collection.cards.struggled]), ...shuffle([...collection.cards.knowIt])]
-                states.push(state)
-                return triggerMenu(msg);
+                catch (error) {
+                    console.log(error)
+                }
 
             case 'Delete my collections❌':
-                await deleteCollection(msg.from.username)
-                await bot.sendMessage(chatId, "Deleted!")
-                return await bot.sendMessage(chatId, 'Choose what to do😊', menuButtons)
+                try {
+                    await deleteCollection(msg.from.username)
+                    await bot.sendMessage(chatId, "Deleted!")
+                }
+                catch (error) {
+                    console.log(error)
+
+                } finally {
+                    return await sendDefaultMessage(chatId)
+                }
             case 'See all my cards👀':
-                const res = await getCollectionOfCards(username)
-                const { struggled, knowIt } = res.cards
-                const reducer = (result, current) => result + '  <strong>' + current.word + '</strong> - ' + current.definition + '\n'
-                const text = '<strong><i>Struggled😔:</i></strong> \n' + struggled.reduce(reducer,'') + '<strong><i>Know it😊:</i></strong> \n' + knowIt.reduce(reducer,'')
-                await bot.sendMessage(chatId, text,{
-                    "parse_mode":"HTML"
-                })
-                return await bot.sendMessage(chatId, 'Choose what to do😊', menuButtons)
+                try {
+                    const res = await getCollectionOfCards(username)
+                    if (!res) 
+                        return await bot.sendMessage(chatId, 'Insert some cards first...')
+                    
+                    const { struggled, knowIt } = res.cards
+                    const reducer = (result, current) => result + '  <strong>' + current.word + '</strong> - ' + current.definition + '\n'
+                    const text = '<strong><i>Struggled😔:</i></strong> \n' + struggled.reduce(reducer, '') + '<strong><i>Know it😊:</i></strong> \n' + knowIt.reduce(reducer, '')
+                    await bot.sendMessage(chatId, text, {
+                        "parse_mode": "HTML"
+                    })
+                }
+                catch (error) {
+                    console.log(error)
+                }
+                finally {
+                    return await sendDefaultMessage(chatId)
+                }
             default:
-                return await bot.sendMessage(chatId, "Use given buttons to use the bot correctly :)", menuButtons)
+                await bot.sendMessage(chatId, "Use given buttons to use the bot correctly :)", menuButtons)
+                return await sendDefaultMessage(chatId)
         }
 
     }
@@ -80,8 +116,8 @@ const triggerMenu = async msg => {
     else {
         const { currentContext, card } = state
         if (currentContext === 'inserting') {
-            await insertCards(msg.from.username, msg.text.toString())
-            await bot.sendMessage(chatId, 'Your cards are saved!')
+            const numberOfSavedCards = await insertCards(msg.from.username, msg.text.toString())
+            await bot.sendMessage(chatId, `Saved ${numberOfSavedCards} cards!`)
             await bot.sendMessage(chatId, 'Choose what to do😊', menuButtons)
             states.splice(states.findIndex(item => item === state), 1)
         }
