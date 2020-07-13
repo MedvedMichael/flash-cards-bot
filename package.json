@@ -10,6 +10,7 @@
     "node-telegram-bot-api": "^0.50.0"
   },
   "scripts": {
+    "start": "node src/server.js",
     "dev": "env-cmd ./.env node src/server.js"
   }
 }
