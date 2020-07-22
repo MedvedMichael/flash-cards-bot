@@ -9,6 +9,18 @@ const menuButtons = {
     }
 }
 
+const movingButtons = {
+    "reply_markup": {
+        "keyboard": [["Know it😊", "Don't know😔"]]
+    }
+}
+
+const choosingButtons = {
+    "reply_markup": {
+        "keyboard": [["Next➡️", "Stop🛑"]]
+    }
+}
+
 bot.onText(/\/start/, async msg => {
     const chatId = msg.chat.id
     const userName = msg.from.first_name
@@ -123,7 +135,7 @@ const triggerMenu = async msg => {
         }
         else if (currentContext === 'moving') {
             if (text !== 'Know it😊' && text !== "Don't know😔")
-                return await bot.sendMessage(chatId, "Use given buttons to use the bot correctly :)");
+                return await bot.sendMessage(chatId, "Use given buttons to use the bot correctly :)", movingButtons);
             const choice = text === 'Know it😊'
 
             const struggledIndex = state.collection.cards.struggled.findIndex(item => item === card)
@@ -139,11 +151,7 @@ const triggerMenu = async msg => {
 
             state.card = null
             state.currentContext = 'choosing'
-            await bot.sendMessage(chatId, "Saved!\nDo you want to continue?)", {
-                "reply_markup": {
-                    "keyboard": [["Next➡️", "Stop🛑"]]
-                }
-            })
+            await bot.sendMessage(chatId, "Saved!\nDo you want to continue?)", choosingButtons)
         }
         else if (currentContext === 'choosing') {
 
@@ -156,7 +164,7 @@ const triggerMenu = async msg => {
                 states.splice(states.findIndex(item => item === state), 1)
                 await bot.sendMessage(chatId, "Choose what to do😊", menuButtons)
             }
-            else await bot.sendMessage(chatId, "Use given buttons to use the bot correctly :)")
+            else await bot.sendMessage(chatId, "Use given buttons to use the bot correctly :)", choosingButtons)
 
         }
 
@@ -185,11 +193,7 @@ const triggerMenu = async msg => {
                     `Compare your answer to the definition I have:
 Your answer: ${text}
 Definition: ${card.definition}
-Push the button to put this card to correct stack`, {
-                    "reply_markup": {
-                        "keyboard": [["Know it😊", "Don't know😔"]]
-                    }
-                })
+Push the button to put this card to correct stack`, movingButtons)
             }
         }
     }
